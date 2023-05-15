@@ -14,6 +14,7 @@ class simple_shell {
   void parse_command(char* cmd, char** cmdTokens);
   void exec_command(char** argv);
   bool isQuit(char* cmd);
+  void changeDirectory(char** argv);
 };
 
 #endif

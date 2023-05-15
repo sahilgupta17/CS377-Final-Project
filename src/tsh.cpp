@@ -37,7 +37,12 @@ void simple_shell::exec_command(char** argv) {
         exit(1);
     }else if (pid == 0) {
         // child process
-        execvp(argv[0], argv); 
+        if (strcmp(argv[0], "cd") == 0) {
+            // Execute the cd command
+            changeDirectory(argv);
+        }else{
+            execvp(argv[0], argv);
+        }
     } else {
         // parent process waiting for child process to finish
         int wait = waitpid(pid, NULL, 0); 
@@ -49,3 +54,13 @@ bool simple_shell::isQuit(char* cmd) {
     return (strcmp(cmd, "quit") == 0);
 }
 
+void simple_shell::changeDirectory(char** argv){
+        if (argv[1] == NULL) {
+            // If no directory is specified, go to the home directory
+            chdir(getenv("HOME"));
+        } else {
+            if (chdir(argv[1]) != 0) {
+                cout << "Error: no such file or directory: "  << argv[1] << endl;
+            }
+        }
+}
