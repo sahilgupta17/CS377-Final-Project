@@ -10,18 +10,20 @@
 #include <iostream>
 
 #include <map>
-#include<vector>
+#include <vector>
 
 using namespace std;
 
 class simple_shell {
   private:
+    map<string, string> aliases;
     vector<string> history;
   public:
     void parse_command(char* cmd, char** cmdTokens);
     void exec_command(char** argv);
     bool isQuit(char* cmd);
     void changeDirectory(char** argv);
+    void setAlias(char** argv);
 };
 
 #endif

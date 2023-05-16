@@ -2,16 +2,15 @@
 #include <iostream>
 #include <sstream>
 #include <cstring>
-#include <map>
 
 #include <cstdlib>
 
 using namespace std;
 
-string concatenateArguments(char** argv) {
+string concatenateArguments(char** argv, int idx=0) {
     stringstream ss;
     
-    for (int i = 0; argv[i] != nullptr; ++i) {
+    for (int i = idx; argv[i] != nullptr; ++i) {
         ss << argv[i];
         if (argv[i + 1] != nullptr) {
             ss << ' ';  // Append space between arguments
@@ -61,6 +60,17 @@ void simple_shell::exec_command(char** argv) {
             for (const string& cmd : history) {
                 cout << cmd << endl;
             }
+        }else if(strcmp(argv[0], "alias") == 0){
+            setAlias(argv);
+        }else if (aliases.count(argv[0]) > 0) {
+            // execute alias command
+            string aliasedCmd = aliases[argv[0]];
+            char* aliasedCmdTokens[100];
+            parse_command(const_cast<char*>(aliasedCmd.c_str()), aliasedCmdTokens);
+            exec_command(aliasedCmdTokens);
+            for (int i = 0; aliasedCmdTokens[i] != nullptr; ++i) {
+                delete[] aliasedCmdTokens[i];
+            }
         }else{
             execvp(argv[0], argv);
         }
@@ -86,3 +96,30 @@ void simple_shell::changeDirectory(char** argv){
         }
     }
 }
+
+void simple_shell:: setAlias(char** argv){
+    string originalCommand = concatenateArguments(argv, 1);
+    string aliasName;
+    string command;
+    bool isAliasName = true;
+    bool isInQuotes = false;
+    for (char c : originalCommand) {
+        if (c == '\'' || c == '"') {
+            isInQuotes = !isInQuotes;
+        } else if (isAliasName && !isInQuotes && c == '=') {
+            isAliasName = false;
+        } else {
+            if (isAliasName) {
+                aliasName += c;
+            } else {
+                command += c;
+            }
+        }
+    }
+    // cout << aliasName << endl;
+    // cout << command << endl;
+    aliases[aliasName] = command;
+}
+
+
+
