@@ -2,8 +2,24 @@
 #include <iostream>
 #include <sstream>
 #include <cstring>
+#include <map>
+
+#include <cstdlib>
 
 using namespace std;
+
+string concatenateArguments(char** argv) {
+    stringstream ss;
+    
+    for (int i = 0; argv[i] != nullptr; ++i) {
+        ss << argv[i];
+        if (argv[i + 1] != nullptr) {
+            ss << ' ';  // Append space between arguments
+        }
+    }
+    
+    return ss.str();
+}
 
 void simple_shell::parse_command(char* cmd, char** cmdTokens) {
     // TODO: tokenize the command string into arguments
@@ -40,6 +56,11 @@ void simple_shell::exec_command(char** argv) {
         if (strcmp(argv[0], "cd") == 0) {
             // Execute the cd command
             changeDirectory(argv);
+        }else if(strcmp(argv[0], "history") == 0){
+            // handlind the history command
+            for (const string& cmd : history) {
+                cout << cmd << endl;
+            }
         }else{
             execvp(argv[0], argv);
         }
@@ -47,6 +68,7 @@ void simple_shell::exec_command(char** argv) {
         // parent process waiting for child process to finish
         int wait = waitpid(pid, NULL, 0); 
     }
+    history.push_back(concatenateArguments(argv));
 }
 
 bool simple_shell::isQuit(char* cmd) {
@@ -55,12 +77,12 @@ bool simple_shell::isQuit(char* cmd) {
 }
 
 void simple_shell::changeDirectory(char** argv){
-        if (argv[1] == NULL) {
-            // If no directory is specified, go to the home directory
-            chdir(getenv("HOME"));
-        } else {
-            if (chdir(argv[1]) != 0) {
-                cout << "Error: no such file or directory: "  << argv[1] << endl;
-            }
+    if (argv[1] == NULL) {
+        // If no directory is specified, go to the home directory
+        chdir(getenv("HOME"));
+    } else {
+        if (chdir(argv[1]) != 0) {
+            cout << "Error: no such file or directory: "  << argv[1] << endl;
         }
+    }
 }

@@ -9,12 +9,19 @@
 #include <unistd.h>
 #include <iostream>
 
+#include <map>
+#include<vector>
+
+using namespace std;
+
 class simple_shell {
- public:
-  void parse_command(char* cmd, char** cmdTokens);
-  void exec_command(char** argv);
-  bool isQuit(char* cmd);
-  void changeDirectory(char** argv);
+  private:
+    vector<string> history;
+  public:
+    void parse_command(char* cmd, char** cmdTokens);
+    void exec_command(char** argv);
+    bool isQuit(char* cmd);
+    void changeDirectory(char** argv);
 };
 
 #endif
