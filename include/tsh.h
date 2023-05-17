@@ -24,6 +24,7 @@ class simple_shell {
     bool isQuit(char* cmd);
     void changeDirectory(char** argv);
     void setAlias(char** argv);
+    void exec_pipeline(char** argv1, char** argv2);
 };
 
 #endif

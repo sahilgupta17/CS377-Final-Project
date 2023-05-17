@@ -44,39 +44,71 @@ void simple_shell::parse_command(char* cmd, char** cmdTokens) {
 }
 
 void simple_shell::exec_command(char** argv) {
-    // TODO: fork a child process to execute the command.
-    // parent process should wait for the child process to complete and reap it
-    int pid = fork(); // forking the parent to get the child process
-    if( pid < 0){ 
-        cout << "Fork failed to execute" << endl;
-        exit(1);
-    }else if (pid == 0) {
-        // child process
-        if (strcmp(argv[0], "cd") == 0) {
-            // Execute the cd command
-            changeDirectory(argv);
-        }else if(strcmp(argv[0], "history") == 0){
-            // handlind the history command
-            for (const string& cmd : history) {
-                cout << cmd << endl;
-            }
-        }else if(strcmp(argv[0], "alias") == 0){
-            setAlias(argv);
-        }else if (aliases.count(argv[0]) > 0) {
-            // execute alias command
-            string aliasedCmd = aliases[argv[0]];
-            char* aliasedCmdTokens[100];
-            parse_command(const_cast<char*>(aliasedCmd.c_str()), aliasedCmdTokens);
-            exec_command(aliasedCmdTokens);
-            for (int i = 0; aliasedCmdTokens[i] != nullptr; ++i) {
-                delete[] aliasedCmdTokens[i];
-            }
-        }else{
-            execvp(argv[0], argv);
+
+    // Check for the pipe symbol '|'
+    bool isPipeline = false;
+    char** argv1 = new char*[100];
+    char** argv2 = new char*[100];
+    int splitIdx = -1;
+
+    for (int i = 0; argv[i] != NULL; ++i) {
+        if (strcmp(argv[i], "|") == 0) {
+            isPipeline = true;
+            splitIdx = i;
+            break;
         }
-    } else {
-        // parent process waiting for child process to finish
-        int wait = waitpid(pid, NULL, 0); 
+    }
+
+    if (isPipeline) {
+        // Split the command into two separate commands
+        for (int i = 0; i < splitIdx; ++i) {
+            argv1[i] = argv[i];
+        }
+        argv1[splitIdx] = NULL;
+
+        int j = 0;
+        for (int i = splitIdx + 1; argv[i] != NULL; ++i) {
+            argv2[j] = argv[i];
+            j++;
+        }
+        argv2[j] = NULL;
+
+        exec_pipeline(argv1, argv2);
+    } else{
+        // TODO: fork a child process to execute the command.
+        // parent process should wait for the child process to complete and reap it
+        int pid = fork(); // forking the parent to get the child process
+        if( pid < 0){ 
+            cout << "Fork failed to execute" << endl;
+            exit(1);
+        }else if (pid == 0) {
+            // child process
+            if (strcmp(argv[0], "cd") == 0) {
+                // Execute the cd command
+                changeDirectory(argv);
+            }else if(strcmp(argv[0], "history") == 0){
+                // handlind the history command
+                for (const string& cmd : history) {
+                    cout << cmd << endl;
+                }
+            }else if(strcmp(argv[0], "alias") == 0){
+                setAlias(argv);
+            }else if (aliases.count(argv[0]) > 0) {
+                // execute alias command
+                string aliasedCmd = aliases[argv[0]];
+                char* aliasedCmdTokens[100];
+                parse_command(const_cast<char*>(aliasedCmd.c_str()), aliasedCmdTokens);
+                exec_command(aliasedCmdTokens);
+                for (int i = 0; aliasedCmdTokens[i] != nullptr; ++i) {
+                    delete[] aliasedCmdTokens[i];
+                }
+            }else{
+                execvp(argv[0], argv);
+            }
+        } else {
+            // parent process waiting for child process to finish
+            int wait = waitpid(pid, NULL, 0); 
+        }
     }
     history.push_back(concatenateArguments(argv));
 }
@@ -121,5 +153,136 @@ void simple_shell:: setAlias(char** argv){
     aliases[aliasName] = command;
 }
 
+// void simple_shell::exec_pipeline(char** argv1, char** argv2) {
+//     int pipefd[2];
+//     pid_t pid;
+
+//     // Create a pipe
+//     if (pipe(pipefd) == -1) {
+//         cout << "Failed to create pipe." << endl;
+//         return;
+//     }
+
+//     // Fork a child process for the first command
+//     pid = fork();
+//     if (pid < 0) {
+//         cout << "Fork failed." << endl;
+//         return;
+//     }
+
+//     if (pid == 0) {
+//         // Child process (first command)
+//         // Close the read end of the pipe
+//         close(pipefd[0]);
+
+//         // Redirect stdout to the write end of the pipe
+//         dup2(pipefd[1], STDOUT_FILENO);
+//         close(pipefd[1]);
+
+//         execvp(argv1[0], argv1);
+
+//         // If execvp returns, it means an error occurred
+//         cout << "Failed to execute command1." << endl;
+//         exit(1);
+//     } else {
+//         // Parent process
+//         // Fork another child process for the second command
+//         pid_t pid2 = fork();
+//         if (pid2 < 0) {
+//             cout << "Fork failed." << endl;
+//             return;
+//         }
+
+//         if (pid2 == 0) {
+//             // Second child process (second command)
+//             // Close the write end of the pipe
+//             close(pipefd[1]);
+
+//             // Redirect stdin to the read end of the pipe
+//             dup2(pipefd[0], STDIN_FILENO);
+//             close(pipefd[0]);
+
+//             execvp(argv2[0], argv2);
+
+//             // If execvp returns, it means an error occurred
+//             cout << "Failed to execute command2." << endl;
+//             exit(1);
+//         } else {
+//             // Parent process
+//             close(pipefd[0]);
+//             close(pipefd[1]);
+
+//             // Wait for both child processes to finish
+//             waitpid(pid, nullptr, 0);
+//             waitpid(pid2, nullptr, 0);
+//         }
+//     }
+// }
+
+void simple_shell::exec_pipeline(char** argv1, char** argv2) {
+    int pipefd[2];
+    pid_t pid;
+
+    // Create a pipe
+    if (pipe(pipefd) == -1) {
+        cout << "Failed to create pipe." << endl;
+        return;
+    }
+
+    // Fork a child process for the first command
+    pid = fork();
+    if (pid < 0) {
+        cout << "Fork failed." << endl;
+        return;
+    }
+
+    if (pid == 0) {
+        // Child process (first command)
+        // Close the read end of the pipe
+        close(pipefd[0]);
+
+        // Redirect stdout to the write end of the pipe
+        dup2(pipefd[1], STDOUT_FILENO);
+        close(pipefd[1]);
+
+        execvp(argv1[0], argv1);
+
+        // If execvp returns, it means an error occurred
+        cout << "Failed to execute command1." << endl;
+        exit(1);
+    } else {
+        // Parent process
+        // Fork another child process for the second command
+        pid_t pid2 = fork();
+        if (pid2 < 0) {
+            cout << "Fork failed." << endl;
+            return;
+        }
+
+        if (pid2 == 0) {
+            // Second child process (second command)
+            // Close the write end of the pipe
+            close(pipefd[1]);
+
+            // Redirect stdin to the read end of the pipe
+            dup2(pipefd[0], STDIN_FILENO);
+            close(pipefd[0]);
+
+            execvp(argv2[0], argv2);
+
+            // If execvp returns, it means an error occurred
+            cout << "Failed to execute command2." << endl;
+            exit(1);
+        } else {
+            // Parent process
+            close(pipefd[0]);
+            close(pipefd[1]);
+
+            // Wait for both child processes to finish
+            waitpid(pid, nullptr, 0);
+            waitpid(pid2, nullptr, 0);
+        }
+    }
+}
 
 
