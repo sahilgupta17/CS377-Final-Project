@@ -33,12 +33,6 @@ or
 make && ./tsh_app
 ```
 
-The make command will run the C++ compiler to build a program executable and a test executable. These are often referred to as program binaries in Unix/Linux terminology.
-
-In addition, the make command will produce a submission.zip every time you run it. The submission.zip file is what you upload to Gradescope to submit your solution. See submission instructions below.
-
-## Usage / Examples
-
 ## Code Structure
 
 - `include`: This is where the C/C++ header files are present. 

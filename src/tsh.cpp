@@ -7,17 +7,29 @@
 
 using namespace std;
 
+/**
+ * @brief return the concatenation of two strings
+ *
+ * @param argv array whose elements are needed to be concatenated
+ * @param idx index stating the elements to be concatenated should be included
+ */
 string concatenateArguments(char** argv, int idx=0) {
     stringstream ss;
     for (int i = idx; argv[i] != nullptr; ++i) {
         ss << argv[i];
         if (argv[i + 1] != nullptr) {
-            ss << ' ';  // Append space between arguments
+            ss << ' '; 
         }
     }
     return ss.str();
 }
 
+/**
+ * @brief parse the cmd into cmdToken and store it there
+ *
+ * @param cmd command input by the user
+ * @param cmdTokens tokenised version of the arguments in cmd
+ */
 void simple_shell::parse_command(char* cmd, char** cmdTokens) {
     // TODO: tokenize the command string into arguments
     char delimiter = ' ';
@@ -43,7 +55,7 @@ void simple_shell::parse_command(char* cmd, char** cmdTokens) {
 
 void simple_shell::exec_command(char** argv) {
 
-    // Check for the pipe symbol '|'
+    // Checking for the pipe symbol '|'
     bool isPipeline = false;
     char** argv1 = new char*[100];
     char** argv2 = new char*[100];
@@ -58,7 +70,9 @@ void simple_shell::exec_command(char** argv) {
     }
 
     if (isPipeline) {
-        // Split the command into two separate commands
+        // input command contains pipe operation
+        // Splitting the command into two separate commands
+        // and storing first command in argv1 and the second in argv2
         for (int i = 0; i < splitIdx; ++i) {
             argv1[i] = argv[i];
         }
@@ -71,11 +85,14 @@ void simple_shell::exec_command(char** argv) {
         }
         argv2[j] = NULL;
 
+        // passing commands to respective function to execute
         exec_pipeline(argv1, argv2);
     } else{
-        // TODO: fork a child process to execute the command.
+        // forking a child process to execute the command.
         // parent process should wait for the child process to complete and reap it
-        int pid = fork(); // forking the parent to get the child process
+
+        // forking the parent to get the child process
+        int pid = fork(); 
         if( pid < 0){ 
             cout << "Fork failed to execute" << endl;
             exit(1);
@@ -85,7 +102,7 @@ void simple_shell::exec_command(char** argv) {
                 // Execute the cd command
                 changeDirectory(argv);
             }else if(strcmp(argv[0], "history") == 0){
-                // handlind the history command
+                // handling the history command
                 for (const string& cmd : history) {
                     cout << cmd << endl;
                 }
@@ -108,6 +125,7 @@ void simple_shell::exec_command(char** argv) {
             int wait = waitpid(pid, NULL, 0); 
         }
     }
+    // adding command to history
     history.push_back(concatenateArguments(argv));
 }
 
@@ -168,10 +186,10 @@ void simple_shell::exec_pipeline(char** argv1, char** argv2) {
 
     if (pid == 0) {
         // Child process (first command)
-        // Close the read end of the pipe
+        // Closing the read end of the pipe
         close(pipefd[0]);
 
-        // Redirect stdout to the write end of the pipe
+        // Redirecting stdout to the write end of the pipe
         dup2(pipefd[1], STDOUT_FILENO);
         close(pipefd[1]);
 
@@ -182,7 +200,7 @@ void simple_shell::exec_pipeline(char** argv1, char** argv2) {
         exit(1);
     } else {
         // Parent process
-        // Fork another child process for the second command
+        // Forking another child process for the second command
         pid_t pid2 = fork();
         if (pid2 < 0) {
             cout << "Fork failed." << endl;
@@ -191,7 +209,7 @@ void simple_shell::exec_pipeline(char** argv1, char** argv2) {
 
         if (pid2 == 0) {
             // Second child process (second command)
-            // Close the write end of the pipe
+            // Closing the write end of the pipe
             close(pipefd[1]);
 
             // Redirect stdin to the read end of the pipe
@@ -208,7 +226,7 @@ void simple_shell::exec_pipeline(char** argv1, char** argv2) {
             close(pipefd[0]);
             close(pipefd[1]);
 
-            // Wait for both child processes to finish
+            // Waiting for both child processes to finish
             waitpid(pid, nullptr, 0);
             waitpid(pid2, nullptr, 0);
         }
